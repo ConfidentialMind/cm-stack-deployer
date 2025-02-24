@@ -1,6 +1,6 @@
 
 ```bash
-cm-stack-deployer/              # Root directory
+cm-quick-start/              # Root directory
 ├── README.md                   # Project documentation
 ├── requirements.txt            # Python dependencies
 ├── setup.py                   # Package installation configuration
