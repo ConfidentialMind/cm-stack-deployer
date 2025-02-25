@@ -3,11 +3,25 @@ import logging
 from pathlib import Path
 
 from cm_deployer.config.generator import generate_configs, save_configs
-from cm_deployer.git import GitOperations
-from cm_deployer.k8s import ArgoCDInstaller
+from cm_deployer.git import clone_cm_repositories
+from cm_deployer.k8s import ArgoCDInstaller, ArgoCDApplication, ArgoCDAppWaiter, RepoSecretManager
 from cm_deployer.utils.logger import setup_logger
 
 logger = logging.getLogger(__name__)
+
+# Repository information
+REPOSITORIES = {
+    "dependencies": {
+        "name": "cm-stack-dependencies",
+        "url": "git@github.com:ConfidentialMind/stack-dependencies.git",
+        "key": "cm-stack-dependencies"
+    },
+    "base": {
+        "name": "cm-stack-base",
+        "url": "git@github.com:ConfidentialMind/stack-base.git",
+        "key": "cm-stack-base"
+    }
+}
 
 def parse_args():
     parser = argparse.ArgumentParser(description='CM Stack Deployer')
@@ -19,6 +33,10 @@ def parse_args():
                        help='Path to output directory')
     parser.add_argument('--debug', action='store_true',
                        help='Enable debug logging')
+    parser.add_argument('--skip-deps', action='store_true',
+                       help='Skip dependencies deployment')
+    parser.add_argument('--skip-base', action='store_true',
+                       help='Skip base deployment')
     return parser.parse_args()
 
 def main():
@@ -33,8 +51,7 @@ def main():
 
         # Clone repositories
         logger.info("Cloning repositories...")
-        git_ops = GitOperations(secrets_dir=args.secrets_dir)
-        if not git_ops.clone_cm_repositories():
+        if not clone_cm_repositories(force=False):
             raise RuntimeError("Failed to clone repositories")
 
         # Generate configurations
@@ -52,17 +69,98 @@ def main():
         if not argocd.wait_ready():
             raise RuntimeError("ArgoCD failed to become ready")
 
-        # TODO: Apply configurations to ArgoCD
-        logger.info("ArgoCD is ready! You can access it by running:")
-        logger.info("kubectl port-forward svc/argocd-server -n argocd 8080:443")
-        logger.info("Then visit: https://localhost:8080")
+        # Create repository secrets for ArgoCD
+        logger.info("Creating repository secrets for ArgoCD...")
+        repo_secret_manager = RepoSecretManager(kubeconfig=kubeconfig)
+        
+        # Create secret for dependencies repository
+        deps_info = REPOSITORIES["dependencies"]
+        deps_key_path = args.secrets_dir / deps_info["key"]
+        if not deps_key_path.exists():
+            raise FileNotFoundError(f"Dependencies SSH key not found: {deps_key_path}")
+            
+        if not repo_secret_manager.create_repo_secret(
+            secret_name=deps_info["name"],
+            repo_url=deps_info["url"],
+            ssh_key_path=deps_key_path
+        ):
+            raise RuntimeError(f"Failed to create repository secret for {deps_info['name']}")
+            
+        # Create secret for base repository
+        base_info = REPOSITORIES["base"]
+        base_key_path = args.secrets_dir / base_info["key"]
+        if not base_key_path.exists():
+            raise FileNotFoundError(f"Base SSH key not found: {base_key_path}")
+            
+        if not repo_secret_manager.create_repo_secret(
+            secret_name=base_info["name"],
+            repo_url=base_info["url"],
+            ssh_key_path=base_key_path
+        ):
+            raise RuntimeError(f"Failed to create repository secret for {base_info['name']}")
+
+        # Get ArgoCD credentials
+        credentials = argocd.get_argocd_credentials()
+        
+        # Initialize application manager and waiter
+        app_manager = ArgoCDApplication(kubeconfig=kubeconfig)
+        waiter = ArgoCDAppWaiter(kubeconfig=kubeconfig)
+        
+        if not args.skip_deps:
+            # Apply Dependencies application
+            logger.info("Applying Dependencies application...")
+            if not app_manager.create_dependencies_app(deps_config):
+                raise RuntimeError("Failed to create Dependencies application")
+
+            # Wait for Dependencies application to be ready
+            logger.info("Waiting for Dependencies application to be ready...")
+            if not waiter.wait_for_app_ready("cm-stack-dependencies-root-app"):
+                raise RuntimeError("Dependencies application failed to become ready")
+            
+            logger.info("Dependencies application is ready!")
+        else:
+            logger.info("Skipping Dependencies deployment")
+
+        if not args.skip_base:
+            # Apply Base application
+            logger.info("Applying Base application...")
+            if not app_manager.create_base_app(base_config):
+                raise RuntimeError("Failed to create Base application")
+
+            # Wait for Base application to be ready
+            logger.info("Waiting for Base application to be ready...")
+            if not waiter.wait_for_app_ready("cm-stack-base"):
+                raise RuntimeError("Base application failed to become ready")
+                
+            logger.info("Base application is ready!")
+        else:
+            logger.info("Skipping Base deployment")
+
+        # Display success message and access instructions
+        logger.info("\n" + "="*50)
+        logger.info("DEPLOYMENT COMPLETED SUCCESSFULLY!")
+        logger.info("="*50 + "\n")
+        
+        logger.info("To access the ArgoCD UI:")
+        logger.info("1. Run the following command to set up port forwarding:")
+        logger.info("   kubectl port-forward svc/argocd-server -n argocd 8080:443")
+        logger.info("2. Open your browser and navigate to: https://localhost:8080")
+        logger.info("3. Login with the following credentials:")
+        logger.info(f"   Username: {credentials['username']}")
+        logger.info(f"   Password: {credentials['password']}")
+        logger.info("\nNOTE: You may see a certificate warning in your browser. This is expected.")
+        
+        logger.info("\nTo access your deployed applications:")
+        if not args.skip_deps:
+            logger.info("Stack Dependencies: Check ArgoCD UI for access information")
+        if not args.skip_base:
+            logger.info(f"Stack Base: Access via the URLs configured in your domain ({base_config.get('base_domain', 'unknown')})")
+        
+        return 0
 
     except Exception as e:
         logger.error(f"Deployment failed: {str(e)}")
         return 1
-
-    logger.info("Deployment completed successfully!")
-    return 0
 
 if __name__ == "__main__":
     exit(main())

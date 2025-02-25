@@ -28,7 +28,7 @@ generated/
 output/
 stack-dependencies/
 stack-base/
-config.yaml
+/config.yaml
 
 # Test artifacts
 tests/examples/

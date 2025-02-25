@@ -4,6 +4,9 @@ setup(
     name="cm-deployer",
     version="0.1.0",
     packages=find_packages(),
+    package_data={
+        "cm_deployer": ["templates/*.yaml"],
+    },
     install_requires=[
         "pyyaml>=6.0",
         "pytest>=7.0"
