@@ -39,6 +39,17 @@ def parse_args():
                        help='Skip base deployment')
     return parser.parse_args()
 
+def display_argocd_access(credentials):
+    """Display ArgoCD access information."""
+    logger.info("\nArgoCD Access Information:")
+    logger.info("1. Run the following command to set up port forwarding:")
+    logger.info("   kubectl port-forward svc/argocd-server -n argocd 8080:443")
+    logger.info("2. Open your browser and navigate to: https://localhost:8080")
+    logger.info("3. Login with the following credentials:")
+    logger.info(f"   Username: {credentials['username']}")
+    logger.info(f"   Password: {credentials['password']}")
+    logger.info("NOTE: You may see a certificate warning in your browser. This is expected.\n")
+
 def main():
     args = parse_args()
     setup_logger(debug=args.debug)
@@ -59,15 +70,15 @@ def main():
         deps_config, base_config = generate_configs(args.config, args.secrets_dir)
         save_configs(deps_config, base_config, args.output_dir)
 
-        # Install and configure ArgoCD
-        logger.info("Installing ArgoCD...")
+        # Install ArgoCD (basic installation)
+        logger.info("Installing ArgoCD (basic installation)...")
         argocd = ArgoCDInstaller(kubeconfig=kubeconfig)
         if not argocd.install():
             raise RuntimeError("Failed to install ArgoCD")
 
-        logger.info("Waiting for ArgoCD to be ready...")
+        logger.info("Waiting for ArgoCD server to be ready...")
         if not argocd.wait_ready():
-            raise RuntimeError("ArgoCD failed to become ready")
+            raise RuntimeError("ArgoCD server failed to become ready")
 
         # Create repository secrets for ArgoCD
         logger.info("Creating repository secrets for ArgoCD...")
@@ -99,9 +110,6 @@ def main():
         ):
             raise RuntimeError(f"Failed to create repository secret for {base_info['name']}")
 
-        # Get ArgoCD credentials
-        credentials = argocd.get_argocd_credentials()
-        
         # Initialize application manager and waiter
         app_manager = ArgoCDApplication(kubeconfig=kubeconfig)
         waiter = ArgoCDAppWaiter(kubeconfig=kubeconfig)
@@ -111,21 +119,35 @@ def main():
             logger.info("Applying Dependencies application...")
             if not app_manager.create_dependencies_app(deps_config):
                 raise RuntimeError("Failed to create Dependencies application")
+                
+            # Get and display ArgoCD credentials (First time)
+            logger.info("Dependencies application has been deployed.")
+            credentials = argocd.get_argocd_credentials()
+            logger.info("While waiting for it to become ready, you can access ArgoCD UI:")
+            display_argocd_access(credentials)
 
             # Wait for Dependencies application to be ready
             logger.info("Waiting for Dependencies application to be ready...")
+            logger.info("This will also deploy and configure the cm-argocd-self-config application")
             if not waiter.wait_for_app_ready("cm-stack-dependencies-root-app"):
                 raise RuntimeError("Dependencies application failed to become ready")
             
             logger.info("Dependencies application is ready!")
         else:
             logger.info("Skipping Dependencies deployment")
+            logger.warning("Note: Skipping the Dependencies app means ArgoCD will not be fully configured")
 
         if not args.skip_base:
             # Apply Base application
             logger.info("Applying Base application...")
             if not app_manager.create_base_app(base_config):
                 raise RuntimeError("Failed to create Base application")
+                
+            # Get and display ArgoCD credentials (Second time)
+            logger.info("Base application has been deployed.")
+            credentials = argocd.get_argocd_credentials()
+            logger.info("While waiting for it to become ready, you can access ArgoCD UI:")
+            display_argocd_access(credentials)
 
             # Wait for Base application to be ready
             logger.info("Waiting for Base application to be ready...")
@@ -136,21 +158,18 @@ def main():
         else:
             logger.info("Skipping Base deployment")
 
-        # Display success message and access instructions
+        # Get ArgoCD credentials for final display
+        credentials = argocd.get_argocd_credentials()
+
+        # Display success message and access instructions (Third time)
         logger.info("\n" + "="*50)
         logger.info("DEPLOYMENT COMPLETED SUCCESSFULLY!")
         logger.info("="*50 + "\n")
         
         logger.info("To access the ArgoCD UI:")
-        logger.info("1. Run the following command to set up port forwarding:")
-        logger.info("   kubectl port-forward svc/argocd-server -n argocd 8080:443")
-        logger.info("2. Open your browser and navigate to: https://localhost:8080")
-        logger.info("3. Login with the following credentials:")
-        logger.info(f"   Username: {credentials['username']}")
-        logger.info(f"   Password: {credentials['password']}")
-        logger.info("\nNOTE: You may see a certificate warning in your browser. This is expected.")
+        display_argocd_access(credentials)
         
-        logger.info("\nTo access your deployed applications:")
+        logger.info("To access your deployed applications:")
         if not args.skip_deps:
             logger.info("Stack Dependencies: Check ArgoCD UI for access information")
         if not args.skip_base:

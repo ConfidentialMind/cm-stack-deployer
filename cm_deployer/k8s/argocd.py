@@ -1,7 +1,6 @@
 import subprocess
 import time
 from pathlib import Path
-import yaml
 import logging
 import os
 from typing import Optional, Dict
@@ -106,56 +105,36 @@ class ArgoCDInstaller:
         if kubeconfig:
             self.env["KUBECONFIG"] = str(kubeconfig)
             logger.debug(f"ArgoCDInstaller using kubeconfig: {kubeconfig}")
-        
-        self.values = {
-            "configs": {
-                "cm": {
-                    "resource.exclusions": """
-                    - apiGroups:
-                      - "tekton.dev"
-                      kinds:
-                      - "PipelineRun"
-                      - "TaskRun"
-                      - "Run"           
-                      clusters:
-                      - "*"
-                    """
-                }
-            }
-        }
-
-    def _generate_values_file(self) -> Path:
-        """Generate values file for ArgoCD installation."""
-        values_file = Path("generated-argocd-values.yaml")
-        with open(values_file, "w") as f:
-            yaml.safe_dump(self.values, f)
-        return values_file
 
     def install(self) -> bool:
-        """Install ArgoCD with required configuration."""
+        """Install ArgoCD with minimal configuration.
+        
+        Further configuration will be done by the cm-argocd-self-config app
+        deployed through the dependencies application.
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
         # Add and update Helm repo
         if not (self.helm.add_repo("argo", "https://argoproj.github.io/argo-helm") and
                 self.helm.update_repos()):
             return False
 
-        # Generate values file
-        values_file = self._generate_values_file()
-
-        try:
-            # Install ArgoCD
-            success = self.helm.upgrade_install(
-                release="argocd",
-                chart="argo/argo-cd",
-                version="7.8.2",
-                namespace="argocd",
-                create_namespace=True,
-                values_file=values_file
-            )
-            return success
-        finally:
-            # Cleanup
-            if values_file.exists():
-                values_file.unlink()
+        # Install ArgoCD with default configuration
+        # The cm-argocd-self-config app will handle specific configuration
+        success = self.helm.upgrade_install(
+            release="argocd",
+            chart="argo/argo-cd",
+            version="7.8.2",
+            namespace="argocd",
+            create_namespace=True
+        )
+        
+        if success:
+            logger.info("ArgoCD installed successfully (basic installation)")
+            logger.info("Further configuration will be applied by cm-argocd-self-config")
+            
+        return success
 
     def wait_ready(self, timeout_seconds: int = 300) -> bool:
         """Wait for ArgoCD to be ready."""
