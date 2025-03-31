@@ -130,9 +130,9 @@ def test_generate_base_config(example_config, secrets_files):
     assert base_config["db"]["backup"]["volumeSnapshot"]["className"] == "longhorn"
     
     # Secrets verification
-    assert base_config["secrets"]["cmImageRegistryKey"] == json.dumps(secrets_files["registry_content"])
+    assert base_config["secrets"]["cmImageRegistryAuth"] == json.dumps(secrets_files["registry_content"])
     assert base_config["secrets"]["cmStackBaseRepoKey"] == secrets_files["base_key_content"]
-    assert base_config["secrets"]["cmStackRepoTektonKey"] == secrets_files["deps_key_content"]
+    assert base_config["secrets"]["cmStackMainRepoKey"] == secrets_files["deps_key_content"]
 
 def test_save_configs(example_config, secrets_files):
     """Test saving configurations to files."""

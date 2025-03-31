@@ -1,0 +1,8 @@
+{
+  "auths": {
+    "confidentialmind.azurecr.io": {
+      "auth": "dGVzdDp0ZXN0",
+      "email": "test@example.com"
+    }
+  }
+}

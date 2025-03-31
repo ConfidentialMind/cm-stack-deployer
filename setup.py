@@ -2,14 +2,16 @@ from setuptools import setup, find_packages
 
 setup(
     name="cm-deployer",
-    version="0.1.0",
+    version="0.1.1",
     packages=find_packages(),
     package_data={
         "cm_deployer": ["templates/*.yaml"],
     },
     install_requires=[
         "pyyaml>=6.0",
-        "pytest>=7.0"
+        "pytest>=7.0",
+        "cryptography>=39.0.0",
+        "kubernetes>=28.1.0"
     ],
     entry_points={
         'console_scripts': [

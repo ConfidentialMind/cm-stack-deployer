@@ -2,8 +2,9 @@ import argparse
 import logging
 from pathlib import Path
 
-from cm_deployer.config.generator import generate_configs, save_configs
+from cm_deployer.config.generator import generate_configs, save_configs, update_base_config_with_jwk
 from cm_deployer.git import clone_cm_repositories
+from cm_deployer.jwk import JWKGenerator
 from cm_deployer.k8s import ArgoCDInstaller, ArgoCDApplication, ArgoCDAppWaiter, RepoSecretManager
 from cm_deployer.utils.logger import setup_logger
 
@@ -37,24 +38,55 @@ def parse_args():
                        help='Skip dependencies deployment')
     parser.add_argument('--skip-base', action='store_true',
                        help='Skip base deployment')
+    parser.add_argument('--jwk-dir', type=Path, default=Path('.secrets/jwk-keys'),
+                       help='Path to store JWK files')
+    parser.add_argument('--skip-jwk', action='store_true',
+                       help='Skip JWK generation')
+    parser.add_argument('--deps-revision', type=str, default="HEAD",
+                       help='Target revision for dependencies repository (branch, tag, or commit SHA)')
+    parser.add_argument('--base-revision', type=str, default="HEAD",
+                       help='Target revision for base repository (branch, tag, or commit SHA)')
     return parser.parse_args()
 
 def display_argocd_access(credentials):
     """Display ArgoCD access information."""
-    logger.info("\nArgoCD Access Information:")
-    logger.info("1. Run the following command to set up port forwarding:")
-    logger.info("   kubectl port-forward svc/argocd-server -n argocd 8080:443")
-    logger.info("2. Open your browser and navigate to: https://localhost:8080")
-    logger.info("3. Login with the following credentials:")
-    logger.info(f"   Username: {credentials['username']}")
-    logger.info(f"   Password: {credentials['password']}")
-    logger.info("NOTE: You may see a certificate warning in your browser. This is expected.\n")
+    logger.info("======== ArgoCD Access Information: ========")
+    logger.info(" NOTE: The below credentials are for advanced setup and debugging mostly.")
+    logger.info(" You don't need to access Argo CD for the daily use of CM Stack.")
+    logger.info(" 1. Run the following command to set up port forwarding:")
+    logger.info("    kubectl port-forward svc/argocd-server -n argocd 8080:443")
+    logger.info(" 2. Open your browser and navigate to: https://localhost:8080")
+    logger.info(" 3. Login with the following credentials:")
+    logger.info(f"    Username: {credentials['username']}")
+    logger.info(f"    Password: {credentials['password']}")
+    logger.info(" NOTE: If your local port 8080 is in use by another process, pls use a different port.")
+    logger.info(" NOTE: You may see a certificate warning in your browser. This is expected.")
+    logger.info("=============================================")
 
 def main():
     args = parse_args()
     setup_logger(debug=args.debug)
 
     try:
+        # Get git revisions from config file if provided and command-line args aren't set
+        deps_revision = args.deps_revision
+        base_revision = args.base_revision
+        
+        # Check if config file exists
+        if args.config.exists():
+            try:
+                from cm_deployer.config.schema import SimplifiedConfig
+                config = SimplifiedConfig.from_yaml(args.config)
+                # Override CLI args with config values only if CLI defaults weren't changed
+                if args.deps_revision == "HEAD" and config.git_revision and config.git_revision.dependencies:
+                    deps_revision = config.git_revision.dependencies
+                    logger.info(f"Using dependencies revision from config: {deps_revision}")
+                if args.base_revision == "HEAD" and config.git_revision and config.git_revision.base:
+                    base_revision = config.git_revision.base
+                    logger.info(f"Using base revision from config: {base_revision}")
+            except Exception as e:
+                logger.warning(f"Failed to read git revisions from config: {str(e)}")
+        
         # Verify kubeconfig exists
         kubeconfig = args.secrets_dir / "kube.conf"
         if not kubeconfig.exists():
@@ -116,8 +148,8 @@ def main():
         
         if not args.skip_deps:
             # Apply Dependencies application
-            logger.info("Applying Dependencies application...")
-            if not app_manager.create_dependencies_app(deps_config):
+            logger.info(f"Applying Dependencies application with target revision: {deps_revision}...")
+            if not app_manager.create_dependencies_app(deps_config, target_revision=deps_revision):
                 raise RuntimeError("Failed to create Dependencies application")
                 
             # Get and display ArgoCD credentials (First time)
@@ -138,9 +170,37 @@ def main():
             logger.warning("Note: Skipping the Dependencies app means ArgoCD will not be fully configured")
 
         if not args.skip_base:
+            # Generate JWK for stack-base (unless skipped)
+            if not args.skip_jwk:
+                logger.info("Generating JWK for stack-base...")
+                jwk_generator = JWKGenerator(base_dir=args.jwk_dir, kubeconfig=kubeconfig)
+                if not jwk_generator.generate_jwk():
+                    raise RuntimeError("Failed to generate JWK")
+                
+                # Read JWK files
+                private_key, jwk = jwk_generator.read_jwk_files()
+                if not private_key or not jwk:
+                    raise RuntimeError("Failed to read JWK files")
+                
+                # Create Kubernetes resources for JWK
+                logger.info("Creating Kubernetes resources for JWK...")
+                if not jwk_generator.create_kubernetes_resources(private_key, jwk):
+                    raise RuntimeError("Failed to create Kubernetes resources for JWK")
+                
+                # Update base_config with JWK content
+                logger.info("Updating base configuration with JWK...")
+                base_config = update_base_config_with_jwk(base_config, jwk)
+            else:
+                logger.info("Skipping JWK generation as requested")
+                # Warn if JWK is likely needed
+                logger.warning("Note: Stack Base typically requires JWK configuration. Make sure it's already set up.")
+            
+            # Save updated configuration
+            save_configs(deps_config, base_config, args.output_dir)
+            
             # Apply Base application
-            logger.info("Applying Base application...")
-            if not app_manager.create_base_app(base_config):
+            logger.info(f"Applying Base application with target revision: {base_revision}...")
+            if not app_manager.create_base_app(base_config, target_revision=base_revision):
                 raise RuntimeError("Failed to create Base application")
                 
             # Get and display ArgoCD credentials (Second time)

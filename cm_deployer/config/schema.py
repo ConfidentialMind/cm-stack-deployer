@@ -27,18 +27,32 @@ class DatabaseBackupConfig:
     schedule: str
 
 @dataclass
+class GitRevisionConfig:
+    dependencies: str
+    base: str
+
+@dataclass
 class SimplifiedConfig:
     base_domain: str
     tls: TLSConfig
     storage: StorageConfig
     database_backup: DatabaseBackupConfig
     gpu: GPUType
+    git_revision: Optional[GitRevisionConfig] = None
 
     @classmethod
     def from_yaml(cls, path: Path) -> 'SimplifiedConfig':
         """Load and validate configuration from YAML file."""
         with open(path) as f:
             data = yaml.safe_load(f)
+
+        # Process git_revision if it exists
+        git_revision = None
+        if 'git_revision' in data:
+            git_revision = GitRevisionConfig(
+                dependencies=data['git_revision'].get('dependencies', 'HEAD'),
+                base=data['git_revision'].get('base', 'HEAD')
+            )
 
         return cls(
             base_domain=data['base_domain'],
@@ -56,7 +70,8 @@ class SimplifiedConfig:
                 retention_days=data['database_backup']['retention_days'],
                 schedule=data['database_backup']['schedule']
             ),
-            gpu=GPUType(data['gpu'])
+            gpu=GPUType(data['gpu']),
+            git_revision=git_revision
         )
 
     def validate(self) -> None:

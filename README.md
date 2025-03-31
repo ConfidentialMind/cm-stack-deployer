@@ -1,3 +1,6 @@
+ToDo:
+- consider removing git operations and pulling either just the root apps templates or having them as a separate "cm-root-apps public repo"
+
 
 ```bash
 cm-quick-start/              # Root directory

@@ -1,0 +1,45 @@
+# CM Stack Advanced Configuration
+# ===========================
+
+# Domain Configuration
+base_domain: "your-subdomain.example.com"  # Base domain for all services
+
+# TLS Configuration
+tls:
+  enabled: true                       # Will automatically deploy cert-manager if true
+  email: "your-email@example.com"     # Email for Let's Encrypt notifications
+  # If you have your own certificate, provide files in .secrets/tls/:
+  # - fullchain.pem (certificate including intermediate and root certificates)
+  # - privkey.pem (private key)
+  use_own_cert: false                 # Use your own certificate instead of Let's Encrypt
+
+# Storage Configuration
+storage:
+  deploy_longhorn: true              # Deploy Longhorn CSI storage
+  snapshot_class: "longhorn"         # VolumeSnapshot class name for backup operations
+                                    # Examples: longhorn, csi-hostpath-snapclass
+
+# Database Backup Configuration
+database_backup:
+  enabled: true                      # Enable database backups
+  retention_days: 3                  # How many days to keep backups
+  schedule: "0 0 */4 * * *"         # Backup schedule (cron format)
+
+# GPU Support
+gpu: none                           # Possible values: nvidia, none (amd support coming soon)
+
+# Git Revision Configuration (Optional)
+# Controls which git revision (branch, tag, or commit) to use for each repository
+# According to Argo CD documentation, targetRevision can be:
+#  - "HEAD" - refers to the default branch (default if not specified)
+#  - Branch name (e.g., "main", "develop", "feature/my-feature")
+#  - Tag name (e.g., "v1.0.0", "release-2023-01-15")
+#  - Commit SHA (full or shortened, e.g., "a1b2c3d4e5f6" or "a1b2c3")
+# git_revision:
+#   dependencies: "HEAD"              # Target revision for dependencies repository
+#   base: "HEAD"                      # Target revision for base repository
+
+# The following components and files are required:
+# - Prometheus monitoring stack (always deployed)
+# - Container registry credentials (read from .secrets/cm-images.json)
+# - SSH keys for repositories (read from .secrets/cm-stack-*)

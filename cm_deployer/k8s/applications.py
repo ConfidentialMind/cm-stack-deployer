@@ -95,16 +95,17 @@ class ArgoCDApplication:
             if temp_file and temp_file.exists():
                 temp_file.unlink()
     
-    def create_dependencies_app(self, values: Dict[str, Any]) -> bool:
+    def create_dependencies_app(self, values: Dict[str, Any], target_revision: str = "HEAD") -> bool:
         """Create or update the Dependencies application.
         
         Args:
             values: Dictionary of values to pass to the Helm chart
+            target_revision: Git revision to target (branch, tag, commit SHA, or HEAD)
             
         Returns:
             bool: True if successful, False otherwise
         """
-        logger.info("Creating/updating Dependencies application")
+        logger.info(f"Creating/updating Dependencies application targeting revision: {target_revision}")
         
         # Format values as YAML string for the manifest
         values_yaml = yaml.dump(values)
@@ -120,7 +121,7 @@ class ArgoCDApplication:
                 "project": "default",
                 "source": {
                     "repoURL": "git@github.com:ConfidentialMind/stack-dependencies.git",
-                    "targetRevision": "HEAD",
+                    "targetRevision": target_revision,
                     "path": "apps",
                     "helm": {
                         "values": values_yaml
@@ -142,16 +143,17 @@ class ArgoCDApplication:
         logger.debug(f"Dependencies application manifest: {manifest}")
         return self.apply_manifest(manifest)
     
-    def create_base_app(self, values: Dict[str, Any]) -> bool:
+    def create_base_app(self, values: Dict[str, Any], target_revision: str = "HEAD") -> bool:
         """Create or update the Base application.
         
         Args:
             values: Dictionary of values to pass to the Helm chart
+            target_revision: Git revision to target (branch, tag, commit SHA, or HEAD)
             
         Returns:
             bool: True if successful, False otherwise
         """
-        logger.info("Creating/updating Base application")
+        logger.info(f"Creating/updating Base application targeting revision: {target_revision}")
         
         # Format values as YAML string for the manifest
         values_yaml = yaml.dump(values)
@@ -167,7 +169,7 @@ class ArgoCDApplication:
                 "project": "default",
                 "source": {
                     "repoURL": "git@github.com:ConfidentialMind/stack-base.git",
-                    "targetRevision": "HEAD",
+                    "targetRevision": target_revision,
                     "path": "helm",
                     "helm": {
                         "values": values_yaml
