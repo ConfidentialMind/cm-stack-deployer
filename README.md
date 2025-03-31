@@ -1,5 +1,8 @@
 ToDo:
 - consider removing git operations and pulling either just the root apps templates or having them as a separate "cm-root-apps public repo"
+- fix: base domain is not being passed properly
+- use latest dependencies branch with app-of-apps improved
+- fix: istio ingress pod is being deployed too early -- before it "knows" the proper image name
 
 
 ```bash
