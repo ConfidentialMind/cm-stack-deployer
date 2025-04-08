@@ -8,7 +8,7 @@ def get_template_path(template_name: str) -> Path:
     """Get the path to a template file.
     
     Args:
-        template_name: Name of the template file
+        template_name: Name of the template file (can include subdirectories)
         
     Returns:
         Path: Path to the template file

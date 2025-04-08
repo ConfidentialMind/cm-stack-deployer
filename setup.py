@@ -5,7 +5,7 @@ setup(
     version="0.1.1",
     packages=find_packages(),
     package_data={
-        "cm_deployer": ["templates/*.yaml"],
+        "cm_deployer": ["templates/*.yaml", "templates/argocd/*.yaml"],
     },
     install_requires=[
         "pyyaml>=6.0",

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -28,8 +28,9 @@ class DatabaseBackupConfig:
 
 @dataclass
 class GitRevisionConfig:
-    dependencies: str
-    base: str
+    """Configuration for git repository revisions."""
+    dependencies: str = "HEAD"
+    base: str = "HEAD"
 
 @dataclass
 class SimplifiedConfig:
@@ -38,7 +39,7 @@ class SimplifiedConfig:
     storage: StorageConfig
     database_backup: DatabaseBackupConfig
     gpu: GPUType
-    git_revision: Optional[GitRevisionConfig] = None
+    git_revision: GitRevisionConfig = field(default_factory=GitRevisionConfig)
 
     @classmethod
     def from_yaml(cls, path: Path) -> 'SimplifiedConfig':
@@ -46,13 +47,14 @@ class SimplifiedConfig:
         with open(path) as f:
             data = yaml.safe_load(f)
 
-        # Process git_revision if it exists
-        git_revision = None
+        # Handle git_revision configuration if present
+        git_revision = GitRevisionConfig()
         if 'git_revision' in data:
-            git_revision = GitRevisionConfig(
-                dependencies=data['git_revision'].get('dependencies', 'HEAD'),
-                base=data['git_revision'].get('base', 'HEAD')
-            )
+            git_data = data['git_revision']
+            if 'dependencies' in git_data:
+                git_revision.dependencies = git_data['dependencies']
+            if 'base' in git_data:
+                git_revision.base = git_data['base']
 
         return cls(
             base_domain=data['base_domain'],

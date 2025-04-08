@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cm-stack-dependencies-root-app
+  namespace: argocd
+spec:
+  project: default
+  source:
+    helm:
+      parameters:
+        - name: deploy.cert_manager
+          value: '{deploy.cert_manager}'
+        - name: deploy.longhorn_csi
+          value: '{deploy.longhorn_csi}'
+        - name: deploy.nvidia_plugin
+          value: '{deploy.nvidia_plugin}'
+        - name: source.repoURL
+          value: $ARGOCD_APP_SOURCE_REPO_URL
+        - name: source.targetRevision
+          value: $ARGOCD_APP_SOURCE_TARGET_REVISION
+    repoURL: git@github.com:ConfidentialMind/stack-dependencies.git
+    targetRevision: '{targetRevision}'
+    path: apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true

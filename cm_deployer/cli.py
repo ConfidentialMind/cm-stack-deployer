@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 from cm_deployer.config.generator import generate_configs, save_configs, update_base_config_with_jwk
+from cm_deployer.config.schema import SimplifiedConfig
 from cm_deployer.git import clone_cm_repositories
 from cm_deployer.jwk import JWKGenerator
 from cm_deployer.k8s import ArgoCDInstaller, ArgoCDApplication, ArgoCDAppWaiter, RepoSecretManager
@@ -42,10 +43,6 @@ def parse_args():
                        help='Path to store JWK files')
     parser.add_argument('--skip-jwk', action='store_true',
                        help='Skip JWK generation')
-    parser.add_argument('--deps-revision', type=str, default="HEAD",
-                       help='Target revision for dependencies repository (branch, tag, or commit SHA)')
-    parser.add_argument('--base-revision', type=str, default="HEAD",
-                       help='Target revision for base repository (branch, tag, or commit SHA)')
     return parser.parse_args()
 
 def display_argocd_access(credentials):
@@ -68,29 +65,18 @@ def main():
     setup_logger(debug=args.debug)
 
     try:
-        # Get git revisions from config file if provided and command-line args aren't set
-        deps_revision = args.deps_revision
-        base_revision = args.base_revision
-        
-        # Check if config file exists
-        if args.config.exists():
-            try:
-                from cm_deployer.config.schema import SimplifiedConfig
-                config = SimplifiedConfig.from_yaml(args.config)
-                # Override CLI args with config values only if CLI defaults weren't changed
-                if args.deps_revision == "HEAD" and config.git_revision and config.git_revision.dependencies:
-                    deps_revision = config.git_revision.dependencies
-                    logger.info(f"Using dependencies revision from config: {deps_revision}")
-                if args.base_revision == "HEAD" and config.git_revision and config.git_revision.base:
-                    base_revision = config.git_revision.base
-                    logger.info(f"Using base revision from config: {base_revision}")
-            except Exception as e:
-                logger.warning(f"Failed to read git revisions from config: {str(e)}")
-        
         # Verify kubeconfig exists
         kubeconfig = args.secrets_dir / "kube.conf"
         if not kubeconfig.exists():
             raise FileNotFoundError(f"Kubeconfig not found at {kubeconfig}")
+
+        # Load configuration to get target revisions
+        config = SimplifiedConfig.from_yaml(args.config)
+        deps_revision = config.git_revision.dependencies
+        base_revision = config.git_revision.base
+        
+        logger.info(f"Using dependencies revision from config: {deps_revision}")
+        logger.info(f"Using base revision from config: {base_revision}")
 
         # Clone repositories
         logger.info("Cloning repositories...")
@@ -147,7 +133,7 @@ def main():
         waiter = ArgoCDAppWaiter(kubeconfig=kubeconfig)
         
         if not args.skip_deps:
-            # Apply Dependencies application
+            # Apply Dependencies application with target revision
             logger.info(f"Applying Dependencies application with target revision: {deps_revision}...")
             if not app_manager.create_dependencies_app(deps_config, target_revision=deps_revision):
                 raise RuntimeError("Failed to create Dependencies application")
@@ -198,7 +184,7 @@ def main():
             # Save updated configuration
             save_configs(deps_config, base_config, args.output_dir)
             
-            # Apply Base application
+            # Apply Base application with target revision
             logger.info(f"Applying Base application with target revision: {base_revision}...")
             if not app_manager.create_base_app(base_config, target_revision=base_revision):
                 raise RuntimeError("Failed to create Base application")

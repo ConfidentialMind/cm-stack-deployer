@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cm-stack-base
+  namespace: argocd
+spec:
+  project: default
+  source:
+    helm:
+      parameters:
+        # DNS configuration
+        - name: dns.authHost
+          value: 'auth.{base_domain}'
+        - name: dns.host
+          value: 'api.{base_domain}'
+        - name: dns.portalHost
+          value: 'portal.{base_domain}'
+        - name: dns.toolsHost
+          value: 'tools.{base_domain}'
+        
+        # TLS configuration
+        - name: tls.enabled
+          value: '{tls.enabled}'
+        - name: tls.certManager.enabled
+          value: '{tls.certManager.enabled}'
+        - name: tls.certManager.email
+          value: '{tls.certManager.email}'
+        
+        # TLS Own Certificate (useOwnCert only)
+        - name: tls.ownCert.useOwnCert
+          value: '{tls.ownCert.useOwnCert}'
+        
+        # Database backup configuration
+        - name: db.backup.enabled
+          value: '{db.backup.enabled}'
+        - name: db.backup.volumeSnapshot.className
+          value: '{db.backup.volumeSnapshot.className}'
+        - name: db.backup.retentionPolicy
+          value: '{db.backup.retentionPolicy}'
+        - name: db.backup.schedule
+          value: '{db.backup.schedule}'
+
+
+      # Multi-line values
+      values: |        
+        # TLS Own Certificate
+        tls:
+          ownCert:
+            fullchainCertificate: |-
+              {tls.ownCert.fullchainCertificate}
+            privateKey: |-
+              {tls.ownCert.privateKey}
+        
+        # Repositories credentials
+        secrets:
+          cmStackMainRepoKey: |-
+            {secrets.cmStackMainRepoKey}
+          cmImageRegistryAuth: |-
+            {secrets.cmImageRegistryAuth}
+        
+        # Istio configuration
+        istio:
+          jwkConfig: |-
+            {istio.jwkConfig}
+    repoURL: git@github.com:ConfidentialMind/stack-base.git
+    targetRevision: '{targetRevision}'
+    path: helm
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
