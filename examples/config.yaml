@@ -15,7 +15,7 @@ tls:
 
 # Storage Configuration
 storage:
-  deploy_longhorn: true              # Deploy Longhorn CSI storage
+  deploy_longhorn: false              # Deploy Longhorn CSI storage
   snapshot_class: "longhorn"         # VolumeSnapshot class name for backup operations
                                     # Examples: longhorn, csi-hostpath-snapclass
 
