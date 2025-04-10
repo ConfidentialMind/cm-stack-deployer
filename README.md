@@ -1,7 +1,5 @@
 ToDo:
-- consider removing git operations and pulling either just the root apps templates or having them as a separate "cm-root-apps public repo"
-- fix: base domain is not being passed properly
-- use latest dependencies branch with app-of-apps improved
+- fix: stack-dependencies app is being deployed too early, before Argo CD "reads" the repo secret
 - fix: istio ingress pod is being deployed too early -- before it "knows" the proper image name
 
 
@@ -21,10 +19,6 @@ cm-quick-start/              # Root directory
 │   │   ├── schema.py         # Variable schema and validation
 │   │   ├── parser.py         # YAML parsing and processing
 │   │   └── generator.py      # Configuration files generation
-│   │
-│   ├── git/                  # Git operations
-│   │   ├── __init__.py
-│   │   └── operations.py     # Git clone and update functionality
 │   │
 │   ├── k8s/                  # Kubernetes operations
 │   │   ├── __init__.py

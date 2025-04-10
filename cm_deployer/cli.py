@@ -4,7 +4,6 @@ from pathlib import Path
 
 from cm_deployer.config.generator import generate_configs, save_configs, update_base_config_with_jwk
 from cm_deployer.config.schema import SimplifiedConfig
-from cm_deployer.git import clone_cm_repositories
 from cm_deployer.jwk import JWKGenerator
 from cm_deployer.k8s import ArgoCDInstaller, ArgoCDApplication, ArgoCDAppWaiter, RepoSecretManager
 from cm_deployer.utils.logger import setup_logger
@@ -77,11 +76,6 @@ def main():
         
         logger.info(f"Using dependencies revision from config: {deps_revision}")
         logger.info(f"Using base revision from config: {base_revision}")
-
-        # Clone repositories
-        logger.info("Cloning repositories...")
-        if not clone_cm_repositories(force=False):
-            raise RuntimeError("Failed to clone repositories")
 
         # Generate configurations
         logger.info("Generating configurations...")
