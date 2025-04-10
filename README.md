@@ -140,7 +140,7 @@ cm-deploy
 
 1. Open `https://portal.<your-subdomain.example.com>`
 2. Ask CM team for temporary username and password
-3. proceed to [Portal Quickstart guide](https://docs.confidentialmind.com/files/0f5bd320-2b35-4acd-8566-ec51ec5a691b) 
+3. proceed to [Portal Quickstart guide](<a link to internal doc>) 
 
 ## Accessing Deployed Services
 
