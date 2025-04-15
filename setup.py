@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
+from cm_deployer import __version__
 
 setup(
     name="cm-deployer",
-    version="0.1.2",
+    version=__version__,
     packages=find_packages(),
     package_data={
         "cm_deployer": ["templates/*.yaml", "templates/argocd/*.yaml"],

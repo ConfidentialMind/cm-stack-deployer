@@ -1,6 +1,4 @@
 ToDo:
-- fix: stack-dependencies app is being deployed too early, before Argo CD "reads" the repo secret
-- fix: istio ingress pod is being deployed too early -- before it "knows" the proper image name
 - feature: generate `stack-admin` password, store it in a secret, show it in `cm-deployer` output.
 
 ```bash

@@ -1,11 +1,13 @@
 import argparse
 import logging
+import sys
 from pathlib import Path
 
+from cm_deployer import __logo__
 from cm_deployer.config.generator import generate_configs, save_configs, update_base_config_with_jwk
 from cm_deployer.config.schema import SimplifiedConfig
 from cm_deployer.jwk import JWKGenerator
-from cm_deployer.k8s import ArgoCDInstaller, ArgoCDApplication, ArgoCDAppWaiter, RepoSecretManager
+from cm_deployer.k8s import ArgoCDInstaller, ArgoCDApplication, ArgoCDAppWaiter, RepoSecretManager, ArgoCDComponentManager
 from cm_deployer.utils.logger import setup_logger
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,8 @@ def parse_args():
                        help='Path to store JWK files')
     parser.add_argument('--skip-jwk', action='store_true',
                        help='Skip JWK generation')
+    parser.add_argument('--skip-argocd-restart', action='store_true',
+                       help='Skip ArgoCD components restart after creating repository secrets')
     return parser.parse_args()
 
 def display_argocd_access(credentials):
@@ -60,6 +64,10 @@ def display_argocd_access(credentials):
     logger.info("=============================================")
 
 def main():
+    # Print the logo as the first step, before any other operations
+    print(__logo__, file=sys.stdout)
+    
+    # Now proceed with normal initialization
     args = parse_args()
     setup_logger(debug=args.debug)
 
@@ -91,6 +99,16 @@ def main():
         logger.info("Waiting for ArgoCD server to be ready...")
         if not argocd.wait_ready():
             raise RuntimeError("ArgoCD server failed to become ready")
+        
+        # Initialize component manager to use for all ArgoCD operations
+        component_manager = ArgoCDComponentManager(kubeconfig=kubeconfig)
+        
+        # Wait for all ArgoCD pods to become ready initially
+        logger.info("Waiting for all ArgoCD pods to become ready initially...")
+        if not component_manager.wait_for_all_argocd_pods_ready():
+            logger.warning("Some ArgoCD pods are not ready. Proceeding anyway, but there might be issues.")
+        else:
+            logger.info("All ArgoCD pods are initially ready")
 
         # Create repository secrets for ArgoCD
         logger.info("Creating repository secrets for ArgoCD...")
@@ -122,6 +140,17 @@ def main():
         ):
             raise RuntimeError(f"Failed to create repository secret for {base_info['name']}")
 
+        # Restart ArgoCD components to refresh repository configuration
+        if not args.skip_argocd_restart:
+            logger.info("Restarting ArgoCD components to refresh repository configuration...")
+            if not component_manager.restart_argocd_components():
+                logger.warning("Failed to restart some ArgoCD components. This might lead to repository access issues.")
+                logger.warning("If you encounter issues, you may need to manually restart ArgoCD pods.")
+            else:
+                logger.info("All ArgoCD components have been restarted and are ready")
+        else:
+            logger.info("Skipping ArgoCD components restart as requested")
+
         # Initialize application manager and waiter
         app_manager = ArgoCDApplication(kubeconfig=kubeconfig)
         waiter = ArgoCDAppWaiter(kubeconfig=kubeconfig)
@@ -132,7 +161,7 @@ def main():
             if not app_manager.create_dependencies_app(deps_config, target_revision=deps_revision):
                 raise RuntimeError("Failed to create Dependencies application")
                 
-            # Get and display ArgoCD credentials (First time)
+            # Get and display ArgoCD credentials
             logger.info("Dependencies application has been deployed.")
             credentials = argocd.get_argocd_credentials()
             logger.info("While waiting for it to become ready, you can access ArgoCD UI:")
@@ -183,7 +212,7 @@ def main():
             if not app_manager.create_base_app(base_config, target_revision=base_revision):
                 raise RuntimeError("Failed to create Base application")
                 
-            # Get and display ArgoCD credentials (Second time)
+            # Get and display ArgoCD credentials
             logger.info("Base application has been deployed.")
             credentials = argocd.get_argocd_credentials()
             logger.info("While waiting for it to become ready, you can access ArgoCD UI:")
@@ -201,7 +230,7 @@ def main():
         # Get ArgoCD credentials for final display
         credentials = argocd.get_argocd_credentials()
 
-        # Display success message and access instructions (Third time)
+        # Display success message and access instructions
         logger.info("\n" + "="*50)
         logger.info("DEPLOYMENT COMPLETED SUCCESSFULLY!")
         logger.info("="*50 + "\n")
