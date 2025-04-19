@@ -43,8 +43,3 @@ gpu: none                             # Possible values: nvidia, none (AMD suppo
                                       # - NVIDIA Container Toolkit .
                                       # Use Nvidia GPU operator to install automatically or follow the manual installation guide
                                       # https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
-
-# The following components and files are required:
-# - Kubeconfig monitoring stack (read from .secrets/kube.conf)
-# - Container registry credentials (read from .secrets/cm-images.json)
-# - SSH keys for repositories (read from .secrets/cm-stack-*)

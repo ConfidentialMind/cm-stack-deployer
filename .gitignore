@@ -1,3 +1,4 @@
+# Temporary files
 **/.tmp
 
 # Python
@@ -23,21 +24,7 @@ wheels/
 *.egg
 
 # Project-specific
-.secrets/
-generated/
-output/
-stack-dependencies/
-stack-base/
-/config.yaml
-
-# Test artifacts
-tests/examples/
-tests/.secrets/
-tests/output/
-tests/empty_secrets/
-.pytest_cache/
-.coverage
-htmlcov/
+cm-stack-deployment/
 
 # Logs
 *.log
