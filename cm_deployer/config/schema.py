@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 import yaml
 
 class GPUType(Enum):
@@ -27,6 +27,14 @@ class DatabaseBackupConfig:
     schedule: str
 
 @dataclass
+class OpenSearchPasswordConfig:
+    admin_password: Optional[str] = None
+
+@dataclass
+class PasswordsConfig:
+    opensearch: OpenSearchPasswordConfig = field(default_factory=OpenSearchPasswordConfig)
+
+@dataclass
 class GitRevisionConfig:
     """Configuration for git repository revisions."""
     dependencies: str = "HEAD"
@@ -39,6 +47,7 @@ class SimplifiedConfig:
     storage: StorageConfig
     database_backup: DatabaseBackupConfig
     gpu: GPUType
+    passwords: PasswordsConfig = field(default_factory=PasswordsConfig)
     git_revision: GitRevisionConfig = field(default_factory=GitRevisionConfig)
 
     @classmethod
@@ -55,6 +64,15 @@ class SimplifiedConfig:
                 git_revision.dependencies = git_data['dependencies']
             if 'base' in git_data:
                 git_revision.base = git_data['base']
+                
+        # Handle passwords configuration if present
+        passwords = PasswordsConfig()
+        if 'passwords' in data:
+            passwords_data = data['passwords']
+            if 'opensearch' in passwords_data:
+                opensearch_data = passwords_data['opensearch']
+                if 'admin-password' in opensearch_data:
+                    passwords.opensearch.admin_password = opensearch_data['admin-password']
 
         return cls(
             base_domain=data['base_domain'],
@@ -73,6 +91,7 @@ class SimplifiedConfig:
                 schedule=data['database_backup']['schedule']
             ),
             gpu=GPUType(data['gpu']),
+            passwords=passwords,
             git_revision=git_revision
         )
 

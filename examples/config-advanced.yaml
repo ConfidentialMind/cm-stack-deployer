@@ -14,3 +14,10 @@
 # git_revision:
 #   dependencies: "HEAD"              # Target revision for dependencies repository
 #   base: "HEAD"                      # Target revision for base repository
+
+# Passwords
+# By default all the passwords are generated randomly.
+# Uncomment the below lines to set your own passwords.
+# passwords:
+#   opensearch:
+#     admin-password: <custom-opensearch-admin-password>

@@ -18,6 +18,12 @@ spec:
           value: $ARGOCD_APP_SOURCE_REPO_URL
         - name: source.targetRevision
           value: $ARGOCD_APP_SOURCE_TARGET_REVISION
+      values: |
+        # Passwords.
+        # Do not alter, unless you know what you are doing!
+        passwords:
+          opensearch:
+            admin-password: {passwords.opensearch.admin-password}
     repoURL: git@github.com:ConfidentialMind/stack-dependencies.git
     targetRevision: '{targetRevision}'
     path: apps

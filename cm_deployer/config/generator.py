@@ -2,8 +2,25 @@ import json
 from pathlib import Path
 from typing import Optional, Tuple, Dict, Any
 import yaml
+import random
+import string
+import logging
 
 from .schema import SimplifiedConfig, GPUType
+
+logger = logging.getLogger(__name__)
+
+def generate_random_password(length=16):
+    """Generate a random password with the specified length.
+    
+    Args:
+        length (int): The length of the password to generate.
+        
+    Returns:
+        str: A random password containing lowercase letters, uppercase letters, and digits.
+    """
+    characters = string.ascii_lowercase + string.ascii_uppercase + string.digits
+    return ''.join(random.choice(characters) for _ in range(length))
 
 class ConfigGenerator:
     def __init__(self, config: SimplifiedConfig, secrets_dir: Path):
@@ -41,13 +58,33 @@ class ConfigGenerator:
 
     def generate_deps_config(self) -> dict:
         """Generate configuration for Stack Dependencies."""
-        return {
+        config = {
             'deploy': {
                 'cert_manager': self.config.tls.enabled,  # Auto-deploy if TLS is enabled
                 'longhorn_csi': self.config.storage.deploy_longhorn,
                 'nvidia_plugin': self.config.gpu == GPUType.NVIDIA
             }
         }
+        
+        # Initialize passwords section
+        config['passwords'] = {
+            'opensearch': {}
+        }
+        
+        # Check if opensearch admin password is set in config
+        if hasattr(self.config, 'passwords') and hasattr(self.config.passwords, 'opensearch') and self.config.passwords.opensearch.admin_password:
+            # Use the user-defined password
+            admin_password = self.config.passwords.opensearch.admin_password
+            logger.info("Using user-defined password for opensearch.admin-password")
+        else:
+            # Generate a random password
+            admin_password = generate_random_password()
+            logger.info("Generated random password for opensearch.admin-password")
+        
+        # Set the password in the config
+        config['passwords']['opensearch']['admin-password'] = admin_password
+        
+        return config
 
     def generate_base_config(self) -> dict:
         """Generate configuration for Stack Base.
