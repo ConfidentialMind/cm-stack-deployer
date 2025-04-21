@@ -71,8 +71,8 @@ class SimplifiedConfig:
             passwords_data = data['passwords']
             if 'opensearch' in passwords_data:
                 opensearch_data = passwords_data['opensearch']
-                if 'admin-password' in opensearch_data:
-                    passwords.opensearch.admin_password = opensearch_data['admin-password']
+                if 'admin' in opensearch_data:
+                    passwords.opensearch.admin_password = opensearch_data['admin']
 
         return cls(
             base_domain=data['base_domain'],

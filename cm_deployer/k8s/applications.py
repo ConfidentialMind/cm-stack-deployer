@@ -134,9 +134,9 @@ class ArgoCDApplication:
             nvidia_value = 'true' if values.get('deploy', {}).get('nvidia_plugin', False) else 'false'
             manifest_yaml = manifest_yaml.replace("{deploy.nvidia_plugin}", nvidia_value)
             
-            # Replace passwords.opensearch.admin-password
-            opensearch_admin_password = values.get('passwords', {}).get('opensearch', {}).get('admin-password', '')
-            manifest_yaml = manifest_yaml.replace("{passwords.opensearch.admin-password}", opensearch_admin_password)
+            # Replace passwords.opensearch.admin
+            opensearch_admin_password = values.get('passwords', {}).get('opensearch', {}).get('admin', '')
+            manifest_yaml = manifest_yaml.replace("{passwords.opensearch.admin}", opensearch_admin_password)
             
             # Parse manifest
             manifest = yaml.safe_load(manifest_yaml)

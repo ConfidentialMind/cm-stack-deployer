@@ -75,14 +75,14 @@ class ConfigGenerator:
         if hasattr(self.config, 'passwords') and hasattr(self.config.passwords, 'opensearch') and self.config.passwords.opensearch.admin_password:
             # Use the user-defined password
             admin_password = self.config.passwords.opensearch.admin_password
-            logger.info("Using user-defined password for opensearch.admin-password")
+            logger.info("Using user-defined password for opensearch.admin")
         else:
             # Generate a random password
             admin_password = generate_random_password()
-            logger.info("Generated random password for opensearch.admin-password")
+            logger.info("Generated random password for opensearch.admin")
         
         # Set the password in the config
-        config['passwords']['opensearch']['admin-password'] = admin_password
+        config['passwords']['opensearch']['admin'] = admin_password
         
         return config
 

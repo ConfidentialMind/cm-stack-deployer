@@ -20,4 +20,4 @@
 # Uncomment the below lines to set your own passwords.
 # passwords:
 #   opensearch:
-#     admin-password: <custom-opensearch-admin-password>
+#     admin: <custom-opensearch-admin-password>
