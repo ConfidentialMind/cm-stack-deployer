@@ -66,6 +66,7 @@ def display_argocd_access(credentials):
 def main():
     # Print the logo as the first step, before any other operations
     print(__logo__, file=sys.stdout)
+    print("Version: ", __version__, file=sys.stdout)
     
     # Now proceed with normal initialization
     args = parse_args()
