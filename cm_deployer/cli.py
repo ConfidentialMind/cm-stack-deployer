@@ -7,7 +7,7 @@ from cm_deployer import __logo__
 from cm_deployer.config.generator import generate_configs, save_configs, update_base_config_with_jwk
 from cm_deployer.config.schema import SimplifiedConfig
 from cm_deployer.jwk import JWKGenerator
-from cm_deployer.k8s import ArgoCDInstaller, ArgoCDApplication, ArgoCDAppWaiter, RepoSecretManager, ArgoCDComponentManager
+from cm_deployer.k8s import ArgoCDInstaller, ArgoCDApplication, ArgoCDAppWaiter, RepoSecretManager, ArgoCDComponentManager, IstioJWKResourceProvisioner
 from cm_deployer.utils.logger import setup_logger
 
 logger = logging.getLogger(__name__)
@@ -179,10 +179,11 @@ def main():
             logger.warning("Note: Skipping the Dependencies app means ArgoCD will not be fully configured")
 
         if not args.skip_base:
-            # Generate JWK for stack-base (unless skipped)
+            # Provisionin JWK for stack-base (unless skipped)
             if not args.skip_jwk:
                 logger.info("Generating JWK for stack-base...")
-                jwk_generator = JWKGenerator(base_dir=args.jwk_dir, kubeconfig=kubeconfig)
+                # Use JWKGenerator to generate the keys
+                jwk_generator = JWKGenerator(base_dir=args.jwk_dir)
                 if not jwk_generator.generate_jwk():
                     raise RuntimeError("Failed to generate JWK")
                 
@@ -191,10 +192,11 @@ def main():
                 if not private_key or not jwk:
                     raise RuntimeError("Failed to read JWK files")
                 
-                # Create Kubernetes resources for JWK
-                logger.info("Creating Kubernetes resources for JWK...")
-                if not jwk_generator.create_kubernetes_resources(private_key, jwk):
-                    raise RuntimeError("Failed to create Kubernetes resources for JWK")
+                # Use IstioJWKResourceProvisioner to create Kubernetes resources
+                logger.info("Provisioning Istio JWK resources...")
+                istio_provisioner = IstioJWKResourceProvisioner(kubeconfig=kubeconfig)
+                if not istio_provisioner.provision_resources(private_key, jwk):
+                    raise RuntimeError("Failed to provision Istio JWK resources in Kubernetes")
                 
                 # Update base_config with JWK content
                 logger.info("Updating base configuration with JWK...")
