@@ -175,5 +175,5 @@ class JWKGenerator:
         with open(self.jwk_path, "r") as f:
             jwks_json = json.load(f)
         
-        # Return just the private key and the JWK dictionary
-        return private_key_pem, json.dumps(jwks_json)
+        # Return the private key and the JWK dictionary
+        return private_key_pem, json.dumps(jwks_json, indent=2)
