@@ -3,7 +3,7 @@ import logging
 import sys
 from pathlib import Path
 
-from cm_deployer import __logo__
+from cm_deployer import __logo__, __version__
 from cm_deployer.config.generator import generate_configs, save_configs, update_base_config_with_jwk
 from cm_deployer.config.schema import SimplifiedConfig
 from cm_deployer.jwk import JWKGenerator
