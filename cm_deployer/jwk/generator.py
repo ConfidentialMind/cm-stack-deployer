@@ -149,11 +149,11 @@ class JWKGenerator:
         
         return jwks
 
-    def read_jwk_files(self) -> Tuple[bytes, Dict[str, Any]]:
+    def read_jwk_files(self) -> Tuple[str, str]:
         """Read JWK files.
         
         Returns:
-            Tuple containing (private_key_pem, jwk_dict)
+            Tuple containing (private_key_str, jwk_json_str)
         """
         logger.debug(f"Reading JWK files from {self.base_dir}")
         
@@ -168,7 +168,7 @@ class JWKGenerator:
         
         # Read private key
         logger.debug(f"Reading private key from {self.private_key_path}")
-        private_key_pem = self.private_key_path.read_bytes()
+        private_key_pem = self.private_key_path.read_bytes().decode('utf-8')
         
         # Read JWK JSON
         logger.debug(f"Reading JWKS from {self.jwk_path}")
@@ -176,4 +176,4 @@ class JWKGenerator:
             jwks_json = json.load(f)
         
         # Return just the private key and the JWK dictionary
-        return private_key_pem, jwks_json
+        return private_key_pem, json.dumps(jwks_json)
