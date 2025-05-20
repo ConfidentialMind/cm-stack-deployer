@@ -12,6 +12,7 @@ setup(
         "pyyaml>=6.0",
         "pytest>=7.0",
         "cryptography>=39.0.0",
+        "authlib>=1.2.0",
         "kubernetes>=28.1.0"
     ],
     entry_points={

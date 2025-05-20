@@ -1,3 +1,3 @@
-from .operations import JWKGenerator
+from .generator import JWKGenerator
 
 __all__ = ['JWKGenerator']
