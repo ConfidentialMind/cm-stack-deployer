@@ -1,9 +1,10 @@
 import argparse
 import logging
 import sys
+import shutil
 from pathlib import Path
 
-from cm_deployer import __logo__, __version__
+from cm_deployer import __name__, __version__, __copyright__, __logo__
 from cm_deployer.config.generator import generate_configs, save_configs, update_base_config_with_jwk
 from cm_deployer.config.schema import SimplifiedConfig
 from cm_deployer.jwk import JWKGenerator
@@ -64,11 +65,14 @@ def display_argocd_access(credentials):
     logger.info("=============================================")
 
 def main():
-    # Print the logo as the first step, before any other operations
-    print(__logo__, file=sys.stdout)
-    print("Version: ", __version__, file=sys.stdout)
+    # Print the logo
+    terminal_width = shutil.get_terminal_size().columns    
+    centered_logo = '\n'.join(line.center(terminal_width) for line in __logo__.splitlines())
+    print(centered_logo, file=sys.stdout)
+    print(f"{__name__} v{__version__} {__copyright__}\n".center(terminal_width), file=sys.stdout)
     
-    # Now proceed with normal initialization
+    
+    # Proceed with initialization
     args = parse_args()
     setup_logger(debug=args.debug)
 
@@ -234,7 +238,8 @@ def main():
         credentials = argocd.get_argocd_credentials()
 
         # Display success message and access instructions
-        logger.info("\n" + "="*50)
+        logger.info("\n")
+        logger.info("="*50)
         logger.info("DEPLOYMENT COMPLETED SUCCESSFULLY!")
         logger.info("="*50 + "\n")
         
@@ -243,9 +248,9 @@ def main():
         
         logger.info("To access your deployed applications:")
         if not args.skip_deps:
-            logger.info("Stack Dependencies: Check ArgoCD UI for access information")
+            logger.info("Stack Dependencies: Check ArgoCD UI dependencies status")
         if not args.skip_base:
-            logger.info(f"Stack Base: Access via the URLs configured in your domain ({base_config.get('base_domain', 'unknown')})")
+            logger.info(f"Stack Base: Access via the URLs configured in your domain (https://portal.{base_config.get('base_domain', 'unknown')})")
         
         return 0
 
