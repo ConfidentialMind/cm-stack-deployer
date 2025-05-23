@@ -29,8 +29,8 @@ class DatabaseBackupConfig:
 @dataclass
 class GitRevisionConfig:
     """Configuration for git repository revisions."""
-    dependencies: str = "HEAD"
-    base: str = "HEAD"
+    dependencies: str = "main"
+    base: str = "main"
 
 @dataclass
 class SimplifiedConfig:

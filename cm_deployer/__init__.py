@@ -1,6 +1,6 @@
 """ConfidentialMind Stack Deployer package."""
 
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 __name__ = '"CM Stack Deployer"'
 __copyright__ = '(c) 2025 ConfidentialMind Oy https://confidentialmind.com'
 __logo__ = """
