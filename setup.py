@@ -20,5 +20,5 @@ setup(
             'cm-deploy=cm_deployer.cli:main',
         ],
     },
-    python_requires='>=3.8',
+    python_requires='>=3.12',
 )
