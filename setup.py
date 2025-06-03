@@ -9,7 +9,6 @@ setup(
         "cm_deployer": ["templates/*.yaml", "templates/argocd/*.yaml"],
     },
     install_requires=[
-        "setuptools>=75.8.0",
         "pyyaml>=6.0",
         "pytest>=7.0",
         "cryptography>=39.0.0",
@@ -21,5 +20,5 @@ setup(
             'cm-deploy=cm_deployer.cli:main',
         ],
     },
-    python_requires='>=3.8',
+    python_requires='>=3.12',
 )
