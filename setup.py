@@ -9,6 +9,7 @@ setup(
         "cm_deployer": ["templates/*.yaml", "templates/argocd/*.yaml"],
     },
     install_requires=[
+        "setuptools>=75.8.0",
         "pyyaml>=6.0",
         "pytest>=7.0",
         "cryptography>=39.0.0",
